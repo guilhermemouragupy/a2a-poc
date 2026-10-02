@@ -1,0 +1,7 @@
+a2a-sdk[http-server]==1.2.1
+sse-starlette==3.5.0
+uvicorn==0.54.0
+httpx==0.28.1
+truststore==0.10.4
+python-dotenv==1.2.3
+pytest==9.1.1

@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A2A · Abertura de vaga</title>
+<style>
+:root {
+  --fundo: #f3f4f6;
+  --painel: #ffffff;
+  --texto: #111827;
+  --suave: #4b5563;
+  --linha: #d1d5db;
+  --borda: #e5e7eb;
+  --ok: #059669;
+  --erro: #dc2626;
+  --espera: #7c3aed;
+  --raio: 14px;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 17px; color: var(--texto); background: var(--fundo);
+  display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr); height: 100vh;
+}
+button { font: inherit; cursor: pointer; border-radius: 10px; border: 1px solid transparent; padding: 10px 18px; background: #111827; color: #fff; font-weight: 600; }
+button:hover { filter: brightness(1.15); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.secundario { background: #fff; color: var(--texto); border-color: var(--linha); }
+
+header.topo { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 24px; background: var(--painel); border-bottom: 1px solid var(--borda); }
+.marca { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.marca .logo { font-weight: 800; font-size: 20px; background: #111827; color: #fff; padding: 2px 10px; border-radius: 8px; }
+.marca h1 { font-size: 22px; margin: 0; }
+.marca .sub { color: var(--suave); font-size: 15px; }
+.controles { display: flex; align-items: center; gap: 14px; }
+.selo { font-size: 14px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.selo.offline { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+label.ritmo { font-size: 15px; color: var(--suave); display: flex; gap: 6px; align-items: center; cursor: pointer; }
+
+main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 0; }
+#mapa { position: relative; margin: 18px; background: var(--painel); border: 1px solid var(--borda); border-radius: var(--raio); overflow: hidden; }
+#mapa svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.aresta { stroke: var(--linha); stroke-width: 3; vector-effect: non-scaling-stroke; transition: stroke .3s; }
+.aresta.ativa { stroke: #6366f1; stroke-width: 5; stroke-dasharray: 10 8; animation: fluxo .6s linear infinite; }
+@keyframes fluxo { to { stroke-dashoffset: -18; } }
+.no { position: absolute; width: 170px; margin-left: -85px; margin-top: -32px; display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer; z-index: 1; }
+.no .avatar { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; font-size: 32px; background: #fff; border: 4px solid var(--cor); box-shadow: 0 2px 8px rgba(0,0,0,.08); transition: transform .25s, box-shadow .25s; }
+.no .estado { position: absolute; top: 54px; font-size: 11.5px; font-weight: 800; letter-spacing: .03em; padding: 2px 8px; border-radius: 999px; border: 2px solid #fff; }
+.no .estado:empty { display: none; }
+.no .nome { margin-top: 14px; font-weight: 700; font-size: 15px; background: var(--painel); padding: 0 6px; border-radius: 6px; }
+.no .pensamento { font-size: 12.5px; color: var(--suave); font-style: italic; background: var(--painel); padding: 0 6px; border-radius: 6px; max-width: 170px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.no.falando .avatar { transform: scale(1.14); box-shadow: 0 0 0 8px color-mix(in srgb, var(--cor) 22%, transparent); }
+.no.pensando .avatar { animation: pensar 1.2s ease-in-out infinite; }
+@keyframes pensar { 50% { box-shadow: 0 0 0 12px color-mix(in srgb, var(--cor) 20%, transparent); } }
+.estado { background: #e5e7eb; color: #374151; }
+.estado.TASK_STATE_SUBMITTED { background: #e5e7eb; color: #374151; }
+.estado.TASK_STATE_WORKING { background: #fef3c7; color: #92400e; }
+.estado.TASK_STATE_INPUT_REQUIRED { background: #ede9fe; color: #5b21b6; }
+.estado.TASK_STATE_COMPLETED { background: #d1fae5; color: #065f46; }
+.estado.TASK_STATE_FAILED { background: #fee2e2; color: #991b1b; }
+.pulso { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--cor); box-shadow: 0 0 0 5px color-mix(in srgb, var(--cor) 25%, transparent); transition: left .7s ease-in-out, top .7s ease-in-out; pointer-events: none; z-index: 2; }
+.legenda { position: absolute; left: 14px; top: 10px; max-width: 30%; font-size: 13px; color: var(--suave); }
+
+#conversa { margin: 18px 18px 18px 0; background: var(--painel); border: 1px solid var(--borda); border-radius: var(--raio); overflow-y: auto; padding: 16px 18px; }
+#vazio { color: var(--suave); text-align: center; margin-top: 25%; font-size: 18px; }
+#feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+#feed > li { animation: entrar .35s ease-out; }
+@keyframes entrar { from { opacity: 0; transform: translateY(6px); } }
+.balao { border: 1px solid var(--borda); border-left: 5px solid var(--cor); border-radius: 12px; padding: 9px 14px; background: #fff; cursor: pointer; }
+.balao:hover { background: #fafafa; }
+.balao .cab { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--suave); margin-bottom: 4px; flex-wrap: wrap; }
+.balao .cab b { color: var(--texto); }
+.balao .corpo { white-space: pre-wrap; line-height: 1.45; }
+.balao.artifact { background: #f0fdf4; border-color: #bbf7d0; border-left-color: var(--ok); }
+.tag { font-size: 11.5px; font-weight: 700; padding: 1px 7px; border-radius: 6px; background: #f3f4f6; color: #374151; }
+.linha { font-size: 14.5px; color: var(--suave); padding: 1px 4px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.linha .estado { font-size: 11.5px; font-weight: 800; padding: 1px 8px; border-radius: 999px; }
+.linha.clicavel { cursor: pointer; }
+.linha.clicavel:hover { color: var(--texto); }
+.linha.pensando { font-style: italic; }
+.linha.erro { color: var(--erro); font-weight: 600; }
+.aprovacao { border: 2px solid var(--espera); border-radius: 14px; padding: 14px 16px; background: #faf5ff; }
+.aprovacao h3 { margin: 0 0 6px; font-size: 17px; color: #5b21b6; }
+.aprovacao .corpo { white-space: pre-wrap; background: #fff; border: 1px solid var(--borda); border-radius: 10px; padding: 12px; line-height: 1.45; margin-top: 8px; }
+.aprovacao .acoes { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.aprovacao input { flex: 1; min-width: 220px; font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--linha); }
+.aprovacao .aprovar { background: var(--ok); }
+.fim { text-align: center; font-weight: 700; padding: 12px; border-radius: 12px; }
+.fim.ok { background: #d1fae5; color: #065f46; }
+.fim.falha { background: #fee2e2; color: #991b1b; }
+
+footer { background: var(--painel); border-top: 1px solid var(--borda); padding: 12px 24px; }
+#form { display: flex; gap: 10px; }
+#texto { flex: 1; font: inherit; font-size: 18px; padding: 12px 16px; border-radius: 12px; border: 2px solid var(--linha); }
+#texto:focus { outline: none; border-color: #6366f1; }
+#sugestoes { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; }
+#sugestoes button { flex: none; white-space: nowrap; background: #eef2ff; color: #3730a3; font-weight: 500; font-size: 14.5px; padding: 6px 12px; border-radius: 999px; }
+#aviso { color: var(--erro); font-size: 14px; margin-top: 4px; min-height: 18px; }
+
+#modal { position: fixed; inset: 0; background: rgba(17,24,39,.55); display: grid; place-items: center; z-index: 10; }
+#modal[hidden] { display: none; }
+#modal .caixa { width: min(860px, 92vw); max-height: 84vh; background: #fff; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; }
+#modal .caixa header { display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--borda); }
+#modal h2 { margin: 0; font-size: 18px; }
+#modal pre { margin: 0; padding: 16px 18px; overflow: auto; font-size: 14px; background: #0f172a; color: #e2e8f0; line-height: 1.45; }
+
+/* telas baixas (projetor 1280×720): nós menores para caber o mapa */
+@media (max-height: 820px) {
+  header.topo, footer { padding-top: 8px; padding-bottom: 8px; }
+  #mapa { margin: 12px; }
+  #conversa { margin: 12px 12px 12px 0; }
+  .no { margin-top: -24px; }
+  .no .avatar { width: 48px; height: 48px; font-size: 24px; border-width: 3px; }
+  .no .estado { top: 40px; font-size: 10.5px; }
+  .no .nome { margin-top: 12px; font-size: 14px; }
+  .no .pensamento { -webkit-line-clamp: 1; }
+}
+@media (max-width: 900px) {
+  main { grid-template-columns: 1fr; grid-template-rows: 460px auto; }
+  #conversa { margin: 0 18px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="marca">
+    <span class="logo">A2A</span>
+    <h1>Abertura de vaga</h1>
+    <span class="sub">5 agentes conversando pelo protocolo Agent2Agent</span>
+  </div>
+  <div class="controles">
+    <span id="modelo" class="selo">…</span>
+    <label class="ritmo" title="Exibe os eventos com um intervalo mínimo, para a plateia acompanhar"><input type="checkbox" id="ritmo" checked> ritmo de apresentação</label>
+    <button id="nova" class="secundario" type="button">Nova conversa</button>
+  </div>
+</header>
+<main>
+  <section id="mapa" aria-label="Mapa dos agentes">
+    <svg id="linhas" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+    <div class="legenda">clique num agente para ver o crachá · clique numa mensagem para ver o JSON</div>
+  </section>
+  <section id="conversa" aria-label="Conversa entre os agentes" aria-live="polite">
+    <div id="vazio">Faça um pedido abaixo para os agentes começarem a conversar.</div>
+    <ol id="feed"></ol>
+  </section>
+</main>
+<footer>
+  <form id="form">
+    <input id="texto" autocomplete="off" placeholder="Ex.: Quero abrir uma vaga de Engenheiro(a) de Software Pleno no time de Plataforma">
+    <button id="enviar" type="submit">Enviar</button>
+  </form>
+  <div id="sugestoes"></div>
+  <div id="aviso"></div>
+</footer>
+<div id="modal" hidden>
+  <div class="caixa" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+    <header><h2 id="modal-titulo"></h2><button id="fechar" class="secundario" type="button">Fechar</button></header>
+    <pre id="modal-json"></pre>
+  </div>
+</div>
+<script>
+const POSICOES = { voce: [50, 9], recrutador: [50, 31], rh: [17, 56], remuneracao: [50, 56], redator: [83, 56], compliance: [83, 81] };
+const ARESTAS = [["voce", "recrutador"], ["recrutador", "rh"], ["recrutador", "remuneracao"], ["recrutador", "redator"], ["redator", "compliance"]];
+const CORES = { voce: "#475569", recrutador: "#4f46e5", rh: "#0d9488", remuneracao: "#d97706", redator: "#db2777", compliance: "#7c3aed" };
+const ROTULOS = { voce: "Você", recrutador: "Recrutador", rh: "Smart RH", remuneracao: "Remuneração", redator: "Redator", compliance: "Compliance" };
+const SUGESTOES = [
+  "Quero abrir uma vaga de Engenheiro(a) de Software Pleno no time de Plataforma",
+  "Preciso de uma pessoa Analista de Dados Sênior para o time de Dados",
+  "Vaga de Product Manager Júnior para o time de Produto",
+];
+const ATRASOS = { mensagem: 5000, artifact: 2000, descoberta: 1400, estado: 900, pensando: 900 };
+const REPLAY = new URLSearchParams(location.search).has("replay");
+
+const $ = (seletor) => document.querySelector(seletor);
+const agentes = {};
+const fila = [];
+let tocando = false;
+
+function esc(t) {
+  return String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function formatar(t) { return esc(t).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>"); }
+function nome(id) { return `${agentes[id]?.emoji ?? ""} ${esc(ROTULOS[id] ?? id)}`; }
+function estadoCurto(e) { return String(e || "").replace("TASK_STATE_", ""); }
+function esperar(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+function idAresta(a, b) { return "a-" + [a, b].sort().join("-"); }
+
+// ---------- Mapa ----------
+function desenharMapa() {
+  const svg = $("#linhas");
+  for (const [a, b] of ARESTAS) {
+    const linha = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    const [x1, y1] = POSICOES[a];
+    const [x2, y2] = POSICOES[b];
+    linha.setAttribute("x1", x1); linha.setAttribute("y1", y1);
+    linha.setAttribute("x2", x2); linha.setAttribute("y2", y2);
+    linha.setAttribute("class", "aresta");
+    linha.id = idAresta(a, b);
+    svg.appendChild(linha);
+  }
+  for (const [id, [x, y]] of Object.entries(POSICOES)) {
+    const a = agentes[id] || { emoji: "•" };
+    const no = document.createElement("div");
+    no.className = "no";
+    no.id = `no-${id}`;
+    no.style.left = `${x}%`;
+    no.style.top = `${y}%`;
+    no.style.setProperty("--cor", CORES[id]);
+    no.innerHTML = `<div class="avatar">${a.emoji}</div><div class="estado"></div><div class="nome">${esc(ROTULOS[id])}</div><div class="pensamento"></div>`;
+    no.addEventListener("click", () => { if (a.card) abrirModal(`Crachá (Agent Card) — ${a.card.name}`, a.card); });
+    $("#mapa").appendChild(no);
+  }
+}
+
+function destacar(id) {
+  const no = document.getElementById(`no-${id}`);
+  if (!no) return;
+  no.classList.add("falando");
+  setTimeout(() => no.classList.remove("falando"), 700);
+}
+
+function pulsar(de, para, cor) {
+  if (REPLAY) return;  // na revisão não há animação
+  const aresta = document.getElementById(idAresta(de, para));
+  if (aresta) {
+    aresta.classList.add("ativa");
+    setTimeout(() => aresta.classList.remove("ativa"), 1100);
+  }
+  if (!POSICOES[de] || !POSICOES[para]) return;
+  const [x1, y1] = POSICOES[de];
+  const [x2, y2] = POSICOES[para];
+  const ponto = document.createElement("div");
+  ponto.className = "pulso";
+  ponto.style.setProperty("--cor", cor);
+  ponto.style.left = `${x1}%`;
+  ponto.style.top = `${y1}%`;
+  $("#mapa").appendChild(ponto);
+  requestAnimationFrame(() => requestAnimationFrame(() => { ponto.style.left = `${x2}%`; ponto.style.top = `${y2}%`; }));
+  setTimeout(() => ponto.remove(), 900);
+  destacar(de);
+}
+
+function marcarEstado(id, estado) {
+  const no = document.getElementById(`no-${id}`);
+  if (!no) return;
+  const selo = no.querySelector(".estado");
+  selo.className = `estado ${estado}`;
+  selo.textContent = estadoCurto(estado);
+  if (estado !== "TASK_STATE_WORKING") {
+    no.classList.remove("pensando");
+    no.querySelector(".pensamento").textContent = "";
+  }
+}
+
+function marcarPensamento(id, texto) {
+  const no = document.getElementById(`no-${id}`);
+  if (!no) return;
+  no.classList.add("pensando");
+  no.querySelector(".pensamento").textContent = texto;
+}
+
+function limparMapa() {
+  document.querySelectorAll(".no").forEach((no) => {
+    no.classList.remove("pensando", "falando");
+    const selo = no.querySelector(".estado");
+    selo.className = "estado";
+    selo.textContent = "";
+    no.querySelector(".pensamento").textContent = "";
+  });
+}
+
+// ---------- Conversa ----------
+function adicionar(html, bruto = null, titulo = "") {
+  $("#vazio").hidden = true;
+  const item = document.createElement("li");
+  item.innerHTML = html;
+  if (bruto) item.firstElementChild.addEventListener("click", () => abrirModal(titulo, bruto));
+  $("#feed").appendChild(item);
+  const conversa = $("#conversa");
+  conversa.scrollTop = conversa.scrollHeight;
+  return item;
+}
+
+function limparTudo() {
+  $("#feed").innerHTML = "";
+  $("#vazio").hidden = false;
+  limparMapa();
+}
+
+function mostrarAprovacao(ev) {
+  const item = adicionar(`<div class="aprovacao">
+    <h3>⏸ ${nome("recrutador")} aguarda você · INPUT_REQUIRED</h3>
+    <div>${esc(ev.pergunta || "Posso publicar?")}</div>
+    <div class="corpo">${formatar(ev.texto)}</div>
+    <div class="acoes">
+      <button class="aprovar" type="button">✅ Aprovar e publicar</button>
+      <input class="ajuste" placeholder="ou peça um ajuste: ex. deixe claro que é remoto">
+      <button class="pedir secundario" type="button">✏️ Pedir ajuste</button>
+    </div>
+  </div>`);
+  const aprovar = item.querySelector(".aprovar");
+  const pedir = item.querySelector(".pedir");
+  const campo = item.querySelector(".ajuste");
+  const travar = (sim) => { aprovar.disabled = pedir.disabled = campo.disabled = sim; };
+  const responder = async (texto) => {
+    travar(true);
+    const r = await fetch("/resposta", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ texto }) });
+    if (!r.ok) {
+      aviso((await r.json()).erro || "não consegui enviar a resposta");
+      travar(false);
+    }
+  };
+  aprovar.addEventListener("click", () => responder("aprovar"));
+  pedir.addEventListener("click", () => {
+    const texto = campo.value.trim();
+    if (texto) responder(texto); else campo.focus();
+  });
+  campo.addEventListener("keydown", (e) => { if (e.key === "Enter") pedir.click(); });
+}
+
+function mostrar(ev) {
+  switch (ev.tipo) {
+    case "inicio":
+      limparTudo();
+      break;
+    case "descoberta": {
+      pulsar(ev.de, ev.para, "#94a3b8");
+      const skills = (ev.card?.skills || []).map((s) => `<span class="tag">skill: ${esc(s.id)}</span>`).join(" ");
+      adicionar(`<div class="linha clicavel">🔎 ${nome(ev.de)} leu o crachá de ${nome(ev.para)} ${skills}</div>`, ev.card, `Crachá (Agent Card) — ${ev.card?.name || ev.para}`);
+      break;
+    }
+    case "mensagem":
+      pulsar(ev.de, ev.para, CORES[ev.de]);
+      adicionar(`<div class="balao" style="--cor:${CORES[ev.de]}"><div class="cab"><b>${nome(ev.de)}</b> → <b>${nome(ev.para)}</b> <span class="tag">SendStreamingMessage</span>${ev.task_id ? ' <span class="tag">continua a mesma task</span>' : ""}</div><div class="corpo">${formatar(ev.texto)}</div></div>`, ev.bruto, "Requisição JSON-RPC enviada");
+      break;
+    case "estado":
+      marcarEstado(ev.agente, ev.estado);
+      if (ev.estado !== "TASK_STATE_SUBMITTED") {
+        adicionar(`<div class="linha clicavel">${nome(ev.agente)} <span class="estado ${ev.estado}">${estadoCurto(ev.estado)}</span> ${esc(ev.texto || "")}</div>`, ev.bruto, `Evento de status — ${estadoCurto(ev.estado)}`);
+      }
+      break;
+    case "artifact":
+      pulsar(ev.de, ev.para, "#059669");
+      adicionar(`<div class="balao artifact"><div class="cab">📦 <b>${nome(ev.de)}</b> → <b>${nome(ev.para)}</b> <span class="tag">artifact: ${esc(ev.nome)}</span></div><div class="corpo">${formatar(ev.texto)}</div></div>`, ev.bruto, `Artifact — ${ev.nome}`);
+      break;
+    case "pensando":
+      marcarPensamento(ev.agente, ev.texto);
+      adicionar(`<div class="linha pensando">💭 ${nome(ev.agente)}: ${esc(ev.texto)}</div>`);
+      break;
+    case "aprovacao":
+      mostrarAprovacao(ev);
+      break;
+    case "fim": {
+      const ok = ev.estado === "TASK_STATE_COMPLETED";
+      adicionar(`<div class="fim ${ok ? "ok" : "falha"}">${ok ? "🎉 Vaga publicada — fluxo concluído" : `❌ O fluxo não terminou (${esc(estadoCurto(ev.estado))})`}</div>`);
+      liberarEntrada(true);
+      break;
+    }
+    case "erro":
+      adicionar(`<div class="linha erro">⚠ ${esc(ev.texto)}</div>`);
+      break;
+  }
+}
+
+// ---------- Ritmo de apresentação ----------
+function receber(ev) {
+  fila.push(ev);
+  if (!tocando) tocar();
+}
+
+async function tocar() {
+  tocando = true;
+  while (fila.length) {
+    const ev = fila.shift();
+    try { mostrar(ev); } catch (erro) { console.error(erro, ev); }
+    if ($("#ritmo").checked) await esperar(ATRASOS[ev.tipo] ?? 0);
+  }
+  tocando = false;
+}
+
+// ---------- Entrada ----------
+function liberarEntrada(livre) {
+  $("#texto").disabled = !livre;
+  $("#enviar").disabled = !livre;
+  document.querySelectorAll("#sugestoes button").forEach((b) => { b.disabled = !livre; });
+}
+
+function aviso(texto) {
+  $("#aviso").textContent = texto;
+  if (texto) setTimeout(() => { $("#aviso").textContent = ""; }, 5000);
+}
+
+async function enviarPedido(texto) {
+  texto = texto.trim();
+  if (!texto) return;
+  liberarEntrada(false);
+  const r = await fetch("/pedido", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ texto }) });
+  if (!r.ok) {
+    aviso((await r.json()).erro || "não consegui enviar o pedido");
+    liberarEntrada(true);
+    return;
+  }
+  $("#texto").value = "";
+}
+
+function abrirModal(titulo, dados) {
+  $("#modal-titulo").textContent = titulo;
+  $("#modal-json").textContent = JSON.stringify(dados, null, 2);
+  $("#modal").hidden = false;
+}
+function fecharModal() { $("#modal").hidden = true; }
+
+async function iniciar() {
+  const dados = await (await fetch("/agentes")).json();
+  for (const a of dados.agentes) agentes[a.id] = a;
+  const selo = $("#modelo");
+  selo.textContent = dados.modelo === "offline" ? "modo offline" : `LLM: ${dados.modelo}`;
+  selo.classList.toggle("offline", dados.modelo === "offline");
+  desenharMapa();
+  for (const sugestao of SUGESTOES) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = sugestao;
+    b.addEventListener("click", () => enviarPedido(sugestao));
+    $("#sugestoes").appendChild(b);
+  }
+  $("#form").addEventListener("submit", (e) => { e.preventDefault(); enviarPedido($("#texto").value); });
+  $("#nova").addEventListener("click", () => { fila.length = 0; limparTudo(); liberarEntrada(true); $("#texto").focus(); });
+  $("#fechar").addEventListener("click", fecharModal);
+  $("#modal").addEventListener("click", (e) => { if (e.target.id === "modal") fecharModal(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") fecharModal(); });
+
+  if (REPLAY) {  // revisão: desenha a última conversa inteira, sem animação
+    const { eventos } = await (await fetch("/historico")).json();
+    eventos.forEach((ev) => { try { mostrar(ev); } catch (erro) { console.error(erro, ev); } });
+    return;
+  }
+  const fonte = new EventSource("/eventos");
+  fonte.onmessage = (m) => receber(JSON.parse(m.data));
+  fonte.onerror = () => aviso("conexão com o Painel caiu — tentando de novo…");
+}
+
+iniciar();
+</script>
+</body>
+</html>
